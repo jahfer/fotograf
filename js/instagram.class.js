@@ -5,15 +5,14 @@ var INSTAGRAM = (function() {
     var _accessToken;
     var _userInfo = _api('users/self');
 
+    // function factory
     function _api(uri) {
         return function() {
             var p = new promise.Promise();
             reqwest({
                 url: 'https://api.instagram.com/v1/' + uri + '/?access_token=' + _accessToken,
                 type: 'jsonp',
-                success: function(result) {
-                    p.done(null, result);
-                }
+                success: function(result) { p.done(null, result); }
             });
             return p;
         };

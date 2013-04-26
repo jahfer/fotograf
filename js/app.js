@@ -27,21 +27,18 @@ function processPhotos(errors, values) {
         }
         captions = captions.concat(grabCaptions(values[i].data));
     }
-    var listOfWords = wordsort(captions);
+    var listOfWords = wordSort(captions);
     console.log(listOfWords);
 }
 
 function grabCaptions(photo) {
     // grab all caption text
-    var captions = _.map(photo, function (photo) {
+    return _.chain(photo).map(function (photo) {
         return steelToe(photo).get('caption.text');
-    });
-    // remove all undefined items
-    // and return list of captions
-    return _.compact(captions);
+    }).compact().value();
 }
 
-function wordsort(captions) {
+function wordSort(captions) {
     return _.chain(captions).map(function(caption) {
         caption = caption.replace(/[\.|\,|\ |\!]+/gi, " ");
         return caption.split(" ");
@@ -51,21 +48,9 @@ function wordsort(captions) {
     .countBy(function(word) { return word; })
     .omit(omittedWords)
     .value();
-    /*var words = _.map(captions, function(caption) {
-        caption = caption.replace(/[\.|\,|\ |\!]+/gi, " ");
-        return caption.split(" ");
-    });
-
-    var flat  = _.flatten(words);
-    var lower = _.invoke(flat, String.prototype.toLowerCase);
-
-    // how many times was each word said?
-    var wordcount = _.countBy(lower, function(word) { return word; });
-    return _.omit(wordcount, omittedWords);*/
 }
 
 // DRAWING =====================================
-
 function drawTagsOverTime (result) {
     console.log("[getLiked]", result);
     svg.selectAll("circle")
