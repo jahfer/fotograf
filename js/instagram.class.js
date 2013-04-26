@@ -1,6 +1,6 @@
 var INSTAGRAM = (function() {
 
-    // === | PRIVATE =======================================
+    // === | PRIVATE =====================================
     var _parseToken = /^#access_token\=(.*)$/;
     var _accessToken;
     var _userInfo = _api('users/self');
@@ -33,6 +33,7 @@ var INSTAGRAM = (function() {
         });
     };
 
+    // === | ACCESSORS ===================================
     return {
         init: getTokenFromHash,
         getUserPosts: getUserPosts,
