@@ -1,14 +1,9 @@
 var INSTAGRAM = (function() {
+
+    // === | PRIVATE =======================================
     var _parseToken = /^#access_token\=(.*)$/;
     var _accessToken;
-
-    function getTokenFromHash() {
-        var hash = window.location.hash;
-        if (hash) {
-            var token = _parseToken.exec(hash);
-            _accessToken = token[1];
-        }
-    }
+    var _userInfo = _api('users/self');
 
     function _api(uri) {
         return function(callback) {
@@ -20,7 +15,14 @@ var INSTAGRAM = (function() {
         };
     }
 
-    var _userInfo = _api('users/self');
+    // === | PUBLIC =======================================
+    function getTokenFromHash() {
+        var hash = window.location.hash;
+        if (hash) {
+            var token = _parseToken.exec(hash);
+            _accessToken = token[1];
+        }
+    }
     var getLiked  = _api('users/self/media/liked');
 
     var getUserPosts = function(callback) {
@@ -32,7 +34,7 @@ var INSTAGRAM = (function() {
     };
 
     return {
-        getTokenFromHash: getTokenFromHash,
+        init: getTokenFromHash,
         getUserPosts: getUserPosts,
         getLiked: getLiked
     };

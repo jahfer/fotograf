@@ -1,0 +1,18 @@
+{
+    "meta": {
+        "code": 200
+    },
+    "data": {
+        "username": "jahfer",
+        "bio": "",
+        "website": "http:\/\/jahfer.com",
+        "profile_picture": "http:\/\/images.ak.instagram.com\/profiles\/anonymousUser.jpg",
+        "full_name": "Jahfer Husain",
+        "counts": {
+            "media": 46,
+            "followed_by": 43,
+            "follows": 61
+        },
+        "id": "799895"
+    }
+}

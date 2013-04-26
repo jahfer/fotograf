@@ -7,13 +7,26 @@ var svg = d3.select("body")
 			.attr("width", w)
 			.attr("height", h);
 
+var commonWords = [];
+
 // redirected from Instagram Auth
 if (window.location.hash) {
-	INSTAGRAM.getTokenFromHash();
-	INSTAGRAM.getLiked(drawTagsOverTime);
-	INSTAGRAM.getUserPosts(function(result) {
-		console.log("[getUserPosts]", result.data);
+	INSTAGRAM.init();
+
+	INSTAGRAM.getUserPosts(grabCaptions);
+	INSTAGRAM.getLiked(grabCaptions);
+	console.log("grabbing captions...");
+
+	setTimeout(function() { console.log("[captions]", commonWords); }, 3000);
+}
+
+function grabCaptions(result) {
+	// grab all caption text
+	var captions = _.map(result.data, function(photo) {
+		return steelToe(photo).get('caption.text');
 	});
+	// remove all undefined items and merge into master list
+	commonWords = commonWords.concat(_.compact(captions));
 }
 
 function drawTagsOverTime (result) {
