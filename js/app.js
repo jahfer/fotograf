@@ -11,10 +11,13 @@ var svg = d3.select("body")
 if (window.location.hash) {
 	INSTAGRAM.getTokenFromHash();
 	INSTAGRAM.getLiked(drawTagsOverTime);
+	INSTAGRAM.getUserPosts(function(result) {
+		console.log("[getUserPosts]", result.data);
+	});
 }
 
 function drawTagsOverTime (result) {
-	console.log("[asyncFeed]", result);
+	console.log("[getLiked]", result);
 	svg.selectAll("circle")
 		.data(result.data)
 		.enter().append("circle")
