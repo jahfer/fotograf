@@ -8,26 +8,34 @@ var svg = d3.select("body")
             .attr("height", h);
 
 var commonWords = [];
+var omittedWords = ["and", "my"];
 
 // redirected from Instagram Auth
 if (window.location.hash) {
     INSTAGRAM.init();
-
+    // async
     INSTAGRAM.getUserPosts(grabCaptions);
     INSTAGRAM.getLiked(grabCaptions);
-    console.log("grabbing captions...");
 
-    setTimeout(function() { console.log("[captions]", commonWords); }, 3000);
+    // implement some type of promise.then()
+    /*var wordList = _.map(commonWords, function(caption) {
+        return caption.split(" ");
+    });
+    // how many times was each word said?
+    var wordcount = _.countBy(wordList, function(word) { return word; });
+    var cleancount = _.omit(wordcount, omittedWords);*/
 }
 
-function grabCaptions(result) {
+function grabCaptions(photoList) {
     // grab all caption text
-    var captions = _.map(result.data, function(photo) {
+    var captions = _.map(photoList.data, function(photo) {
         return steelToe(photo).get('caption.text');
     });
     // remove all undefined items and merge into master list
     commonWords = commonWords.concat(_.compact(captions));
 }
+
+// DRAWING =====================================
 
 function drawTagsOverTime (result) {
     console.log("[getLiked]", result);
