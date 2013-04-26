@@ -1,6 +1,6 @@
 // #access_token=799895.ea88e3c.716e004addb642e0b36407c167b289de
 
-var w = 960;
+var w = 500;
 var h = 300;
 var barPadding = 1;
 var svg = d3.select('body')
@@ -8,7 +8,11 @@ var svg = d3.select('body')
             .attr('width', w)
             .attr('height', h);
 
-var omittedWords = ['', 'a', 'and', 'then', 'this', 'is', 'i', 'the', 'so', 'he', 'she', 'it', 'of', 'to', 'my'];
+var omittedWords = ['', 'a', 'and', 'then', 'i\'m', 'in', 'on', 'for',
+                    'out', 'with', 'can', 'can\'t', 'this', 'over', 'under',
+                    'be', 'more', 'less', 'why', 'not', 'you', 'me', 'that',
+                    'is', 'i', 'the', 'so', 'he', 'she', 'it', 'of', 'to',
+                    'my'];
 // redirected from Instagram Auth
 if (window.location.hash) {
     document.getElementById("auth-btn").style.display = "none";
@@ -29,13 +33,18 @@ function processPhotos(errors, values) {
         captions = captions.concat(grabCaptions(values[i].data));
     }
     var sorted = wordSort(captions);
-    drawCommonWordGraph(sorted);
+    drawCommonWordGraph(sorted.slice(0, 20));
+
+    _.each(sorted, function(tag) {
+        INSTAGRAM.search(tag);
+    });
 }
 
 function grabCaptions(photo) {
     // grab all caption text
     return _.chain(photo).map(function (photo) {
-        return steelToe(photo).get('caption.text');
+        //return steelToe(photo).get('caption.text');
+        return steelToe(photo).get('tags').join(" ");
     }).compact().value();
 }
 
@@ -77,6 +86,7 @@ function drawCommonWordGraph (dataset) {
             .attr('fill', function(d) {
                 return 'rgb(0, 0, ' + (d[1] * 25) + ')';
             });
+
     svg.selectAll('text')
         .data(dataset)
         .enter().append('text')

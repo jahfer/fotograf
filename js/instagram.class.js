@@ -41,10 +41,15 @@ var INSTAGRAM = (function() {
         return p;
     };
 
+    var search = function(term) {
+        return _api("tags/"+term+"/media/recent")();
+    };
+
     // === | ACCESSORS ===================================
     return {
         init: getTokenFromHash,
         getUserPosts: getUserPosts,
-        getLiked: getLiked
+        getLiked: getLiked,
+        search: search
     };
 })();
