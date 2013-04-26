@@ -1,16 +1,17 @@
 // #access_token=799895.ea88e3c.716e004addb642e0b36407c167b289de
 
-var w = 500;
-var h = 100;
-var svg = d3.select("body")
-            .append("svg")
-            .attr("width", w)
-            .attr("height", h);
+var w = 960;
+var h = 300;
+var barPadding = 1;
+var svg = d3.select('body')
+            .append('svg')
+            .attr('width', w)
+            .attr('height', h);
 
-var omittedWords = ["and", "my"];
-
+var omittedWords = ['', 'a', 'and', 'then', 'this', 'is', 'i', 'the', 'so', 'he', 'she', 'it', 'of', 'to', 'my'];
 // redirected from Instagram Auth
 if (window.location.hash) {
+    document.getElementById("auth-btn").style.display = "none";
     INSTAGRAM.init();
     // async
     promise.join([
@@ -23,12 +24,12 @@ function processPhotos(errors, values) {
     var captions = [];
     for (var i=0; i<2; i++) {
         if (errors[i]) {
-            return console.log("[processPhotos] Error!");
+            return console.log('[processPhotos] Error!');
         }
         captions = captions.concat(grabCaptions(values[i].data));
     }
-    var listOfWords = wordSort(captions);
-    console.log(listOfWords);
+    var sorted = wordSort(captions);
+    drawCommonWordGraph(sorted);
 }
 
 function grabCaptions(photo) {
@@ -39,46 +40,62 @@ function grabCaptions(photo) {
 }
 
 function wordSort(captions) {
-    return _.chain(captions).map(function(caption) {
-        caption = caption.replace(/[\.|\,|\ |\!]+/gi, " ");
-        return caption.split(" ");
-    })
-    .flatten()
-    .invoke(String.prototype.toLowerCase)
-    .countBy(function(word) { return word; })
-    .omit(omittedWords)
-    .value();
+    return _.chain(captions)
+            .map(function(caption) {
+                caption = caption.replace(/[\.|\,|\ |\!]+/gi, ' ');
+                return caption.split(' ');
+            })
+            .flatten()
+            .invoke(String.prototype.toLowerCase)
+            .countBy(function(word) { return word; })
+            .omit(omittedWords)
+            .pairs()
+            .sortBy(function(arr) {
+                // reverse sort
+                return -arr[1];
+            })
+            .value();
 }
 
 // DRAWING =====================================
-function drawTagsOverTime (result) {
-    console.log("[getLiked]", result);
-    svg.selectAll("circle")
-        .data(result.data)
-        .enter().append("circle")
-            .attr("cx", function(d, i) {
-                return i * 50 + 20;
-            })
-            .attr("cy", function(d, i) {
-                return i * 20 + 20;
-            })
-            .attr("r", function(d) {
-                return d.likes.count;
-            });
+function drawCommonWordGraph (dataset) {
+    var baseline = 100;
 
-    svg.selectAll("text")
-        .data(result.data)
-        .enter().append("text")
+    svg.selectAll('rect')
+        .data(dataset)
+        .enter().append('rect')
+            .attr('x', function(d, i) {
+                return i * (w / dataset.length);
+            })
+            .attr('y', function(d) {
+                return baseline - (d[1] * 10);
+            })
+            .attr('width', w / dataset.length - barPadding)
+            .attr('height', function(d) {
+                return d[1] * 10;
+            })
+            .attr('fill', function(d) {
+                return 'rgb(0, 0, ' + (d[1] * 25) + ')';
+            });
+    svg.selectAll('text')
+        .data(dataset)
+        .enter().append('text')
             .text(function(d) {
-                return d.caption.text;
+                return d[0];
             })
             .attr("x", function(d, i) {
-                return i * 50 + 20;
+                d.cx = (i * (w / dataset.length) + (w / dataset.length - barPadding) / 2) + 4;
+                return d.cx;
             })
-            .attr("y", function(d, i) {
-                return i * 20 + 20;
+            .attr("y", function(d) {
+                d.cy = baseline + 10;
+                return d.cy;
+            })
+            .attr("transform", function(d, i) {
+                return "rotate(-90 "+d.cx+", "+d.cy+")";
             })
             .attr("font-family", "sans-serif")
             .attr("font-size", "11px")
-            .attr("fill", "red");
+            .attr("fill", "#888")
+            .attr("text-anchor", "end");
 }
