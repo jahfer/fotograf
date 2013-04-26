@@ -7,32 +7,61 @@ var svg = d3.select("body")
             .attr("width", w)
             .attr("height", h);
 
-var commonWords = [];
 var omittedWords = ["and", "my"];
 
 // redirected from Instagram Auth
 if (window.location.hash) {
     INSTAGRAM.init();
     // async
-    INSTAGRAM.getUserPosts(grabCaptions);
-    INSTAGRAM.getLiked(grabCaptions);
-
-    // implement some type of promise.then()
-    /*var wordList = _.map(commonWords, function(caption) {
-        return caption.split(" ");
-    });
-    // how many times was each word said?
-    var wordcount = _.countBy(wordList, function(word) { return word; });
-    var cleancount = _.omit(wordcount, omittedWords);*/
+    promise.join([
+        INSTAGRAM.getUserPosts,
+        INSTAGRAM.getLiked
+    ]).then(processPhotos);
 }
 
-function grabCaptions(photoList) {
+function processPhotos(errors, values) {
+    var captions = [];
+    for (var i=0; i<2; i++) {
+        if (errors[i]) {
+            return console.log("[processPhotos] Error!");
+        }
+        captions = captions.concat(grabCaptions(values[i].data));
+    }
+    var listOfWords = wordsort(captions);
+    console.log(listOfWords);
+}
+
+function grabCaptions(photo) {
     // grab all caption text
-    var captions = _.map(photoList.data, function(photo) {
+    var captions = _.map(photo, function (photo) {
         return steelToe(photo).get('caption.text');
     });
-    // remove all undefined items and merge into master list
-    commonWords = commonWords.concat(_.compact(captions));
+    // remove all undefined items
+    // and return list of captions
+    return _.compact(captions);
+}
+
+function wordsort(captions) {
+    return _.chain(captions).map(function(caption) {
+        caption = caption.replace(/[\.|\,|\ |\!]+/gi, " ");
+        return caption.split(" ");
+    })
+    .flatten()
+    .invoke(String.prototype.toLowerCase)
+    .countBy(function(word) { return word; })
+    .omit(omittedWords)
+    .value();
+    /*var words = _.map(captions, function(caption) {
+        caption = caption.replace(/[\.|\,|\ |\!]+/gi, " ");
+        return caption.split(" ");
+    });
+
+    var flat  = _.flatten(words);
+    var lower = _.invoke(flat, String.prototype.toLowerCase);
+
+    // how many times was each word said?
+    var wordcount = _.countBy(lower, function(word) { return word; });
+    return _.omit(wordcount, omittedWords);*/
 }
 
 // DRAWING =====================================

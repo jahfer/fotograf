@@ -6,12 +6,16 @@ var INSTAGRAM = (function() {
     var _userInfo = _api('users/self');
 
     function _api(uri) {
-        return function(callback) {
+        return function() {
+            var p = new promise.Promise();
             reqwest({
                 url: 'https://api.instagram.com/v1/' + uri + '/?access_token=' + _accessToken,
                 type: 'jsonp',
-                success: callback
+                success: function(result) {
+                    p.done(null, result);
+                }
             });
+            return p;
         };
     }
 
@@ -25,12 +29,17 @@ var INSTAGRAM = (function() {
     }
     var getLiked  = _api('users/self/media/liked');
 
-    var getUserPosts = function(callback) {
-        _userInfo(function(result) {
+    var getUserPosts = function() {
+        var p = new promise.Promise();
+        _userInfo().then(function(err, result) {
+            if (err) {
+                console.log("[getUserPosts] Error!");
+            }
             var userId = result.data.id;
             var userFeed = _api('users/' + userId + '/media/recent');
-            userFeed(callback);
+            userFeed().then(function(err, result) { p.done(null, result); });
         });
+        return p;
     };
 
     // === | ACCESSORS ===================================
