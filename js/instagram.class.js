@@ -4,6 +4,7 @@ var INSTAGRAM = (function() {
     var _parseToken = /^#access_token\=(.*)$/;
     var _accessToken;
     var _userInfo = _api('users/self');
+    var _userData = {};
 
     // function factory
     function _api(uri) {
@@ -18,27 +19,38 @@ var INSTAGRAM = (function() {
         };
     }
 
-    // === | PUBLIC =======================================
-    function getTokenFromHash() {
+    function _getTokenFromHash() {
         var hash = window.location.hash;
         if (hash) {
             var token = _parseToken.exec(hash);
             _accessToken = token[1];
         }
     }
-    var getLiked  = _api('users/self/media/liked');
 
-    var getUserPosts = function() {
+    // === | PUBLIC =======================================
+    function init() {
+        _getTokenFromHash();
         var p = new promise.Promise();
         _userInfo().then(function(err, result) {
             if (err) {
-                console.log("[getUserPosts] Error!");
+                return console.log("[UserData] Error!");
             }
-            var userId = result.data.id;
-            var userFeed = _api('users/' + userId + '/media/recent');
-            userFeed().then(function(err, result) { p.done(null, result); });
+            _userData = result.data;
+            p.done(null, true);
         });
         return p;
+    }
+
+    function getUserData() {
+        return _userData;
+    }
+
+    var getLiked  = _api('users/self/media/liked');
+
+    var getUserPosts = function() {
+        var userId = _userData.id;
+        var userFeed = _api('users/' + userId + '/media/recent');
+        return userFeed();
     };
 
     var search = function(term) {
@@ -47,9 +59,10 @@ var INSTAGRAM = (function() {
 
     // === | ACCESSORS ===================================
     return {
-        init: getTokenFromHash,
+        init: init,
         getUserPosts: getUserPosts,
         getLiked: getLiked,
-        search: search
+        search: search,
+        getUserData: getUserData
     };
 })();

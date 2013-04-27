@@ -17,12 +17,19 @@ var omittedWords = ['', 'a', 'and', 'then', 'i\'m', 'in', 'on', 'for',
 // redirected from Instagram Auth
 if (window.location.hash) {
     document.getElementById('auth-btn').style.display = 'none';
-    INSTAGRAM.init();
-    // async
-    promise.join([
-        INSTAGRAM.getUserPosts,
-        INSTAGRAM.getLiked
-    ]).then(processPhotos);
+    INSTAGRAM.init().then(function(err, res) {
+        var user = INSTAGRAM.getUserData();
+        document.getElementById("top-user").innerHTML = user.username;
+        document.getElementById("top-following").innerHTML = "Following: " + user.counts.follows;
+        document.getElementById("top-followers").innerHTML = "Followers: " + user.counts.followed_by;
+        document.getElementById("top-profile").src = user.profile_picture;
+
+        // async
+        promise.join([
+            INSTAGRAM.getUserPosts,
+            INSTAGRAM.getLiked
+        ]).then(processPhotos);
+    });
 }
 
 function processPhotos(errors, values) {
@@ -72,9 +79,17 @@ function handleSearch (data, i) {
 function drawCommonWordGraph (dataset) {
     var baseline = 100,
         diameter = 500;
-        sepFactor = 1.3;
+        sepFactor = 2.5;
 
-    var defs = svg.append("defs")
+    var defs = svg.append("defs");
+
+    var radScale = d3.scale.linear()
+                     .domain([
+                        d3.min(dataset, function(d) { return d[1]; }),
+                        d3.max(dataset, function(d) { return d[1]; })
+                     ])
+                     .range([10, 50])
+                     .clamp(true);
 
     var wbWidth = 500;
     var wbCenter = { x: wbWidth / 2, y: h / 2 };
@@ -96,7 +111,7 @@ function drawCommonWordGraph (dataset) {
     var node = clouds
                 .enter().append('circle')
                 .attr('class', 'tag-bubble')
-                .attr('r',      function (d) { return d[1] * 7; })
+                .attr('r',      function (d) { return radScale(d[1]); })
                 .attr('cx',     function (d) { return d.x; })
                 .attr('cy',     function (d) { return d.y; })
                 .attr('fill',   function (d) {
@@ -133,7 +148,7 @@ function drawCommonWordGraph (dataset) {
         .gravity(-0.01)
         // separate circles from one another
         .charge( function(d) {
-            var val = d[1] * 5;
+            var val = radScale(d[1]);
             return -(val*val) / sepFactor;
         })
         .friction(0.9)
