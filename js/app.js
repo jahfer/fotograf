@@ -1,8 +1,7 @@
 // #access_token=799895.ea88e3c.716e004addb642e0b36407c167b289de
 
-var w = 500;
-var h = 400;
-var center = { x: w / 2, y: h / 2 };
+var w = 960;
+var h = 350;
 var barPadding = 1;
 var svg = d3.select('body')
             .append('svg')
@@ -36,10 +35,6 @@ function processPhotos(errors, values) {
     }
     var sorted = wordSort(captions);
     drawCommonWordGraph(sorted.slice(0, 20));
-
-    _.each(sorted, function(tag) {
-        //INSTAGRAM.search(tag);
-    });
 }
 
 function grabCaptions(photo) {
@@ -68,18 +63,28 @@ function wordSort(captions) {
             .value();
 }
 
+function handleSearch (data, i) {
+    var tag = data[0];
+    INSTAGRAM.search(tag);
+}
+
 // DRAWING =====================================
 function drawCommonWordGraph (dataset) {
     var baseline = 100,
         diameter = 500;
         sepFactor = 1.3;
 
+    var defs = svg.append("defs")
+
+    var wbWidth = 500;
+    var wbCenter = { x: wbWidth / 2, y: h / 2 };
+
     // use forces to make elastic effect
-    var force = d3.layout.force().size([w, h]);
+    var force = d3.layout.force().size([wbWidth, h]);
     force.nodes(dataset);
     // assign random location to start with
     force.nodes().forEach( function(d, i) {
-        d.x = Math.random() * w;
+        d.x = Math.random() * wbWidth;
         d.y = Math.random() * h;
     });
     // gather nodes
@@ -90,6 +95,7 @@ function drawCommonWordGraph (dataset) {
     // initial parameters
     var node = clouds
                 .enter().append('circle')
+                .attr('class', 'tag-bubble')
                 .attr('r',      function (d) { return d[1] * 7; })
                 .attr('cx',     function (d) { return d.x; })
                 .attr('cy',     function (d) { return d.y; })
@@ -105,7 +111,9 @@ function drawCommonWordGraph (dataset) {
                 })
                 .on('mouseout', function (d, i) {
                     d3.select('#label-' + i).attr('display', 'none');
-                });
+                })
+                .on('click', handleSearch);
+
     var text = labels
                 .enter().append('text')
                 .text(function(d)           { return "#" + d[0]; })
@@ -140,11 +148,43 @@ function drawCommonWordGraph (dataset) {
 
         }).start();
 
-    // Generates a gravitational point in the middle
     function moveCenter( alpha ) {
         force.nodes().forEach(function(d) {
-            d.x = d.x + (center.x - d.x) * (0.2 + 0.02) * alpha;
-            d.y = d.y + (center.y - d.y) * (0.2 + 0.02) * alpha;
+            d.x = d.x + (wbCenter.x - d.x) * (0.2 + 0.02) * alpha;
+            d.y = d.y + (wbCenter.y - d.y) * (0.2 + 0.02) * alpha;
         });
     }
+
+
+    // MAP
+    var projection = d3.geo.mercator()
+                       .scale(200)
+                       .center([9.1021, 18.28])
+                       .translate([w / 2, h / 2 + 400])
+                       .precision(0.1);
+    var path = d3.geo.path()
+                 .projection(projection);
+
+    var mapContainer = svg.append("g")
+                          .attr("id", "mapContainer")
+                          .attr("transform", "translate("+wbWidth+", 0) scale(0.4)");
+
+    d3.json("data/world-50m.json", function(err, world) {
+        mapContainer.insert("path", ".graticule")
+            .datum(topojson.object(world, world.objects.land))
+            .attr("class", "land")
+            .attr("d", path);
+
+        mapContainer.insert("path", ".graticule")
+            .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
+            .attr("class", "boundary")
+            .attr("d", path);
+
+        mapContainer.append("circle")
+           .attr("r", 5)
+           .attr("fill", "red")
+           .attr("transform", function() {
+                return "translate(" + projection([-75,43]) + ")";
+           });
+    });
 }
