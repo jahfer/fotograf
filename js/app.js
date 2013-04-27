@@ -1,7 +1,7 @@
 // #access_token=799895.ea88e3c.716e004addb642e0b36407c167b289de
 
 var w = 500;
-var h = 300;
+var h = 400;
 var center = { x: w / 2, y: h / 2 };
 var barPadding = 1;
 var svg = d3.select('body')
@@ -14,6 +14,7 @@ var omittedWords = ['', 'a', 'and', 'then', 'i\'m', 'in', 'on', 'for',
                     'be', 'more', 'less', 'why', 'not', 'you', 'me', 'that',
                     'is', 'i', 'the', 'so', 'he', 'she', 'it', 'of', 'to',
                     'my'];
+
 // redirected from Instagram Auth
 if (window.location.hash) {
     document.getElementById('auth-btn').style.display = 'none';
@@ -69,59 +70,63 @@ function wordSort(captions) {
 
 // DRAWING =====================================
 function drawCommonWordGraph (dataset) {
-    var baseline = 100;
-    var diameter = 500;
+    var baseline = 100,
+        diameter = 500;
+        sepFactor = 1.3;
 
+    // use forces to make elastic effect
     var force = d3.layout.force().size([w, h]);
     force.nodes(dataset);
-
+    // assign random location to start with
     force.nodes().forEach( function(d, i) {
         d.x = Math.random() * w;
         d.y = Math.random() * h;
     });
-
-    var clouds = svg.selectAll('circle')
-                .data(force.nodes());
-
-    var node = clouds
-                    .enter().append('circle')
-                    .attr('r', function(d) {
-                        return d[1] * 5;
-                    })
-                    .attr('cx', function(d) {
-                        return d.x;
-                    })
-                    .attr('cy', function(d) {
-                        return d.y;
-                    })
-                    .attr('fill', 'red')
-                    .on('mouseover', function(d, i) {
-                        d3.select('#label-' + i).attr('display', 'inline');
-                    })
-                    .on('mouseout', function (d, i) {
-                        d3.select('#label-' + i).attr('display', 'none');
-                    });
-
+    // gather nodes
+    var clouds = svg.selectAll('circle').data(force.nodes());
+    // gather labels
     var labels = svg.selectAll('text').data(force.nodes());
 
-    var label = labels
-                    .enter().append('text')
-                    .text(function(d)           { return "#" + d[0]; })
-                    .attr('x', function(d, i)   { return d.x; })
-                    .attr('y', function(d)      { return d.y; })
-                    .attr('id', function(d, i) { return 'label-' + i; })
-                    .attr('font-family', 'sans-serif')
-                    .attr('font-size', '11px')
-                    .attr('fill', '#000')
-                    .attr('display', 'none')
-                    .attr('text-anchor', 'middle')
-                    .attr('pointer-events', 'none');
+    // initial parameters
+    var node = clouds
+                .enter().append('circle')
+                .attr('r',      function (d) { return d[1] * 7; })
+                .attr('cx',     function (d) { return d.x; })
+                .attr('cy',     function (d) { return d.y; })
+                .attr('fill',   function (d) {
+                    return "hsl(20, "+ d[1]*10 +"%, 61%)";
+                })
+                .attr('opacity', function (d) {
+                    return Math.max(d[1] / 13, 0.4);
+                })
+                // toggle label over item
+                .on('mouseover', function (d, i) {
+                    d3.select('#label-' + i).attr('display', 'inline');
+                })
+                .on('mouseout', function (d, i) {
+                    d3.select('#label-' + i).attr('display', 'none');
+                });
+    var text = labels
+                .enter().append('text')
+                .text(function(d)           { return "#" + d[0]; })
+                .attr('x', function(d, i)   { return d.x; })
+                .attr('y', function(d)      { return d.y; })
+                .attr('id', function(d, i) { return 'label-' + i; })
+                .attr('font-family', 'sans-serif')
+                .attr('font-size', '11px')
+                .attr('fill', '#fff')
+                .attr('display', 'none')
+                .attr('text-anchor', 'middle')
+                .attr('pointer-events', 'none');
 
+    // thanks to: http://vallandingham.me/vis/gates/ for
+    // the idea of using force for elastic grouping
     force
         .gravity(-0.01)
+        // separate circles from one another
         .charge( function(d) {
             var val = d[1] * 5;
-            return -(val*val) / 2.3;
+            return -(val*val) / sepFactor;
         })
         .friction(0.9)
         .on('tick', function(e) {
@@ -129,7 +134,7 @@ function drawCommonWordGraph (dataset) {
             node
                 .attr('cx', function(d) { return d.x; })
                 .attr('cy', function(d) { return d.y; });
-            label
+            text
                 .attr('x', function(d) { return d.x; })
                 .attr('y', function(d) { return d.y; });
 
@@ -142,43 +147,4 @@ function drawCommonWordGraph (dataset) {
             d.y = d.y + (center.y - d.y) * (0.2 + 0.02) * alpha;
         });
     }
-
-    /*svg.selectAll('rect')
-        .data(dataset)
-        .enter().append('rect')
-            .attr('x', function(d, i) {
-                return i * (w / dataset.length);
-            })
-            .attr('y', function(d) {
-                return baseline - (d[1] * 10);
-            })
-            .attr('width', w / dataset.length - barPadding)
-            .attr('height', function(d) {
-                return d[1] * 10;
-            })
-            .attr('fill', function(d) {
-                return 'rgb(0, 0, ' + (d[1] * 25) + ')';
-            });
-
-    svg.selectAll('text')
-        .data(dataset)
-        .enter().append('text')
-            .text(function(d) {
-                return d[0];
-            })
-            .attr('x', function(d, i) {
-                d.cx = (i * (w / dataset.length) + (w / dataset.length - barPadding) / 2) + 4;
-                return d.cx;
-            })
-            .attr('y', function(d) {
-                d.cy = baseline + 10;
-                return d.cy;
-            })
-            .attr('transform', function(d, i) {
-                return 'rotate(-90 '+d.cx+', '+d.cy+')';
-            })
-            .attr('font-family', 'sans-serif')
-            .attr('font-size', '11px')
-            .attr('fill', '#888')
-            .attr('text-anchor', 'end');*/
 }
