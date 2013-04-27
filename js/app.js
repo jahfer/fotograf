@@ -1,13 +1,5 @@
 // #access_token=799895.ea88e3c.716e004addb642e0b36407c167b289de
 
-var w = 960;
-var h = 350;
-var barPadding = 1;
-var svg = d3.select('body')
-            .append('svg')
-            .attr('width', w)
-            .attr('height', h);
-
 var omittedWords = ['', 'a', 'and', 'then', 'i\'m', 'in', 'on', 'for',
                     'out', 'with', 'can', 'can\'t', 'this', 'over', 'under',
                     'be', 'more', 'less', 'why', 'not', 'you', 'me', 'that',
@@ -33,21 +25,38 @@ if (window.location.hash) {
 }
 
 function processPhotos(errors, values) {
-    var captions = [];
+    // Get tags for bubble graph
+    var tags = [];
     for (var i=0; i<2; i++) {
         if (errors[i]) {
             return console.log('[processPhotos] Error!');
         }
-        captions = captions.concat(grabCaptions(values[i].data));
+        tags = tags.concat(grabTags(values[i].data));
     }
-    var sorted = wordSort(captions);
+    var sorted = wordSort(tags);
+    // Draw graph
     drawCommonWordGraph(sorted.slice(0, 20));
+
+    // Get related photos to common tags
+    var publicImages = [];
+    getImagesFromTags(sorted).then(function(errors, values) {
+        for (var i=0; i<errors.length; i++) {
+            publicImages.push(values[i].data);
+        }
+        var out = _.chain(publicImages)
+                   .flatten()
+                   .filter(function(photo) {
+                        return !_.isNull(photo.location) && !_.isUndefined(photo.location.longitude);
+                    })
+                   .map(function(photo) { return _.pick(photo, 'link', 'location', 'images'); })
+                   .value();
+        // Draw map with dots
+        drawMap(out);
+    });
 }
 
-function grabCaptions(photo) {
-    // grab all caption text
+function grabTags(photo) {
     return _.chain(photo).map(function (photo) {
-        //return steelToe(photo).get('caption.text');
         return steelToe(photo).get('tags').join(' ');
     }).compact().value();
 }
@@ -70,12 +79,34 @@ function wordSort(captions) {
             .value();
 }
 
-function handleSearch (data, i) {
-    var tag = data[0];
-    INSTAGRAM.search(tag);
+function getImagesFromTags(tags) {
+    var images = [];
+
+    tags = tags.slice(0, 5);
+
+    var reqs = _.map(tags, function(d) {
+        var tag = d[0];
+        return function() {
+            return INSTAGRAM.search(tag);
+        };
+    });
+
+    return promise.join(reqs);
 }
 
 // DRAWING =====================================
+
+var w = 960;
+var h = 350;
+var barPadding = 1;
+var svg = d3.select('body')
+            .append('svg')
+            .attr('width', w)
+            .attr('height', h);
+
+var wbWidth = 500;
+var wbCenter = { x: wbWidth / 2, y: h / 2 };
+
 function drawCommonWordGraph (dataset) {
     var baseline = 100,
         diameter = 500;
@@ -90,9 +121,6 @@ function drawCommonWordGraph (dataset) {
                      ])
                      .range([10, 50])
                      .clamp(true);
-
-    var wbWidth = 500;
-    var wbCenter = { x: wbWidth / 2, y: h / 2 };
 
     // use forces to make elastic effect
     var force = d3.layout.force().size([wbWidth, h]);
@@ -126,8 +154,7 @@ function drawCommonWordGraph (dataset) {
                 })
                 .on('mouseout', function (d, i) {
                     d3.select('#label-' + i).attr('display', 'none');
-                })
-                .on('click', handleSearch);
+                });
 
     var text = labels
                 .enter().append('text')
@@ -163,15 +190,15 @@ function drawCommonWordGraph (dataset) {
 
         }).start();
 
-    function moveCenter( alpha ) {
+    function moveCenter (a) {
         force.nodes().forEach(function(d) {
-            d.x = d.x + (wbCenter.x - d.x) * (0.2 + 0.02) * alpha;
-            d.y = d.y + (wbCenter.y - d.y) * (0.2 + 0.02) * alpha;
+            d.x = d.x + (wbCenter.x - d.x) * (0.2 + 0.02) * a;
+            d.y = d.y + (wbCenter.y - d.y) * (0.2 + 0.02) * a;
         });
     }
+}
 
-
-    // MAP
+function drawMap (photos) {
     var projection = d3.geo.mercator()
                        .scale(200)
                        .center([9.1021, 18.28])
@@ -195,11 +222,26 @@ function drawCommonWordGraph (dataset) {
             .attr("class", "boundary")
             .attr("d", path);
 
-        mapContainer.append("circle")
+        mapContainer.selectAll("circle")
+            .data(photos)
+            .enter().append("circle")
+                .attr("r", 4)
+                .attr("fill", "red")
+                .attr("transform", function(d) {
+                    d.proj = projection([d.location.longitude, d.location.latitude]);
+                    console.log("projection[" +d.location.latitude+","+d.location.longitude+"]");
+                    return "translate(" + d.proj + ")";
+                    //return "translate(" + projection([-75,43]) + ")"; // New York City
+                })
+                .on('mouseover', function (d, i) {
+                    console.log(d.location);
+                });
+
+        /*mapContainer.append("circle")
            .attr("r", 5)
            .attr("fill", "red")
            .attr("transform", function() {
                 return "translate(" + projection([-75,43]) + ")";
-           });
+           });*/
     });
 }
