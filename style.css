@@ -1,9 +1,12 @@
 body{
-	background-image: url("images/bg.jpg");
-		-webkit-background-size: cover;
+	height: 100%;
+	background: #000 url("images/bg.jpg") no-repeat center center fixed;
+	-webkit-background-size: cover;
 	 -moz-background-size: cover;
 	 -o-background-size: cover;
 	 background-size: cover;
+	 margin:0;
+	 padding: 0;
 	font-family: 'PT Sans', sans-serif;
 }
 
@@ -11,7 +14,7 @@ body{
 	color: #fff;	
 	text-align:center;
 	width:100%;
-	bottom: -30px;
+	bottom: -400px;
 	font-size: 0.8em;
 	position: absolute;
 }
@@ -114,6 +117,7 @@ a{
 	left: 0;
 	top: 0;
 	position: absolute;
+	opacity: 0;
 }
 
 #top-user{
@@ -208,6 +212,23 @@ a{
  	position: relative;
  	float: right;
  	margin-right: 60px;
+ 	/*
+ 	margin:0 auto;
+ 	margin-bottom: 20px;
+ 	font-weight: 400;*/
+ }
+ 
+ 
+ .title_chart{
+ 	font-family: 'Lobster', cursive;
+ 	text-shadow: 2px 2px 0 #2a0b1a;
+ 	color: #fff;
+ 	font-size: 2.0em;
+ 	position: relative;
+ 	margin-right: 60px;
+ 	margin: 20px auto;
+ 	padding: 0 10px;
+ 	top: 450px;
  	/*
  	margin:0 auto;
  	margin-bottom: 20px;
