@@ -186,7 +186,7 @@ function drawCommonWordGraph (dataset) {
                     return "hsl(20, "+ d[1]*10 +"%, 61%)";
                 })
                 .attr('opacity', function (d) {
-                    return Math.max(d[1] / 13, 0.4);
+                    return Math.max((radScale(d[1])) / 40, 0.4);
                 })
                 // toggle label over item
                 .on('mouseover', function (d, i) {
