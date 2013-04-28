@@ -24,6 +24,20 @@ if (window.location.hash) {
     });
 }
 
+d3.select("#content").append("div")
+    .attr("class", "tooltip")
+    .style('opacity', 0)
+    .attr('pointer-events', 'none')
+    .append('img');
+d3.select("#content .tooltip").append("p")
+    .attr('class', "photo-caption")
+    .style('position', 'absolute')
+    .style('bottom', '0')
+    .style('background', 'rgba(30,30,30,0.7)')
+    .style('color', '#fff')
+    .style('padding', '0 10px')
+    .html("Hello world!");
+
 function processPhotos(errors, values) {
     // Get tags for bubble graph
     var tags = [];
@@ -34,6 +48,8 @@ function processPhotos(errors, values) {
         tags = tags.concat(grabTags(values[i].data));
     }
     var sorted = wordSort(tags);
+    d3.select('#loader_hashtags')
+        .transition().style('opacity', 0);
     // Draw graph
     drawCommonWordGraph(sorted.slice(0, 20));
 
@@ -44,12 +60,20 @@ function processPhotos(errors, values) {
             publicImages.push(values[i].data);
         }
         var out = _.chain(publicImages)
+                   .map(function (d, i) {
+                        return _.map(d, function(e, j) {
+                            e.tag = sorted[i][0];
+                            return e;
+                        });
+                   })
                    .flatten()
                    .filter(function(photo) {
                         return !_.isNull(photo.location) && !_.isUndefined(photo.location.longitude);
                     })
-                   .map(function(photo) { return _.pick(photo, 'link', 'location', 'images'); })
+                   .map(function(photo) { return _.pick(photo, 'link', 'location', 'images', 'tag'); })
                    .value();
+        d3.select('#loader_map')
+            .transition().style('opacity', 0);
         // Draw map with dots
         drawMap(out);
     });
@@ -215,33 +239,58 @@ function drawMap (photos) {
         mapContainer.insert("path", ".graticule")
             .datum(topojson.object(world, world.objects.land))
             .attr("class", "land")
-            .attr("d", path);
+            .attr("d", path)
+            .attr('pointer-events', 'none');
 
         mapContainer.insert("path", ".graticule")
             .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
             .attr("class", "boundary")
-            .attr("d", path);
+            .attr("d", path)
+            .attr('pointer-events', 'none');
 
         mapContainer.selectAll("circle")
             .data(photos)
             .enter().append("circle")
-                .attr("r", 4)
-                .attr("fill", "red")
+                .attr("r", 12)
+                .attr("fill", "white")
                 .attr("transform", function(d) {
                     d.proj = projection([d.location.longitude, d.location.latitude]);
-                    console.log("projection[" +d.location.latitude+","+d.location.longitude+"]");
                     return "translate(" + d.proj + ")";
                     //return "translate(" + projection([-75,43]) + ")"; // New York City
                 })
                 .on('mouseover', function (d, i) {
-                    console.log(d.location);
-                });
 
-        /*mapContainer.append("circle")
-           .attr("r", 5)
-           .attr("fill", "red")
-           .attr("transform", function() {
-                return "translate(" + projection([-75,43]) + ")";
-           });*/
+                    console.log(d);
+
+                    d3.select(this)
+                        .transition()
+                            .attr("r", 16)
+                            .attr("fill", "#e18558");
+
+                    d3.select('.tooltip')
+                        .transition()
+                            .style('left', d3.event.pageX - 65 + "px")
+                            .style('top', d3.event.pageY - 160 + "px")
+                            .style('opacity', 1)
+                        .select('.photo-caption').text(d.tag);
+
+                    d3.select('.tooltip')
+                        .select('img')
+                            .attr('src', d.images.thumbnail.url)
+                            .attr('alt', d.tag);
+                })
+                .on('mouseout', function (d, i) {
+                    d3.select(this)
+                        .transition()
+                            .attr("r", 12)
+                            .attr("fill", "white");
+
+                    d3.select('.tooltip')
+                        .transition()
+                            .style('opacity', 0)
+                            .select('img')
+                                .attr('src', '')
+                                .attr('alt', '');
+                });
     });
 }
