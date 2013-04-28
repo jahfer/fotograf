@@ -15,6 +15,8 @@ if (window.location.hash) {
         document.getElementById("top-following").innerHTML = "Following: " + user.counts.follows;
         document.getElementById("top-followers").innerHTML = "Followers: " + user.counts.followed_by;
         document.getElementById("top-profile").src = user.profile_picture;
+        d3.select("#top").transition()
+            .style('opacity', 1);
 
         // async
         promise.join([
@@ -22,15 +24,29 @@ if (window.location.hash) {
             INSTAGRAM.getLiked
         ]).then(processPhotos);
     });
+} else {
+    window.onload = function() {
+        document.getElementById("content").style.display = 'none';
+        document.getElementById("loaders").style.display = 'none';
+        [].forEach.call(document.querySelectorAll(".title_hashtag"), function(el) {
+            el.style.display = 'none';
+        });
+        [].forEach.call(document.querySelectorAll(".title_map"), function(el) {
+            el.style.display = 'none';
+        });
+    };
 }
 
 d3.select("#content").append("div")
     .attr("class", "tooltip")
-    .style('opacity', 0)
     .attr('pointer-events', 'none')
-    .append('img');
+    .style('opacity', 0)
+    .style('display', 'none')
+    .append('img')
+        .attr('pointer-events', 'none');
 d3.select("#content .tooltip").append("p")
     .attr('class', "photo-caption")
+    .attr('pointer-events', 'none')
     .style('position', 'absolute')
     .style('bottom', '0')
     .style('background', 'rgba(30,30,30,0.7)')
@@ -50,8 +66,9 @@ function processPhotos(errors, values) {
     var sorted = wordSort(tags);
     d3.select('#loader_hashtags')
         .transition().style('opacity', 0);
-    // Draw graph
+    // Draw graphs
     drawCommonWordGraph(sorted.slice(0, 20));
+    drawLineChart(sorted.slice(0, 20));
 
     // Get related photos to common tags
     var publicImages = [];
@@ -62,7 +79,7 @@ function processPhotos(errors, values) {
         var out = _.chain(publicImages)
                    .map(function (d, i) {
                         return _.map(d, function(e, j) {
-                            e.tag = sorted[i][0];
+                            e.tag = "#" + sorted[i][0];
                             return e;
                         });
                    })
@@ -85,11 +102,11 @@ function grabTags(photo) {
     }).compact().value();
 }
 
-function wordSort(captions) {
-    return _.chain(captions)
-            .map(function(caption) {
-                caption = caption.replace(/[\.|\,|\ |\!]+/gi, ' ');
-                return caption.split(' ');
+function wordSort(tags) {
+    return _.chain(tags)
+            .map(function(tag) {
+                tag = tag.replace(/[\.|\,|\ |\!]+/gi, ' ');
+                return tag.split(' ');
             })
             .flatten()
             .invoke(String.prototype.toLowerCase)
@@ -143,8 +160,7 @@ function drawCommonWordGraph (dataset) {
                         d3.min(dataset, function(d) { return d[1]; }),
                         d3.max(dataset, function(d) { return d[1]; })
                      ])
-                     .range([10, 50])
-                     .clamp(true);
+                     .range([10, 50]);
 
     // use forces to make elastic effect
     var force = d3.layout.force().size([wbWidth, h]);
@@ -222,6 +238,81 @@ function drawCommonWordGraph (dataset) {
     }
 }
 
+function drawLineChart (dataset) {
+
+    dataset = _.shuffle(dataset);
+
+    yAxis = _.chain(dataset)
+             .map(function (d) { return d[1]; })
+             .sortBy(function (d) { return d[1]; })
+             .uniq(true)
+             .value();
+
+    var baseline = 100,
+        line = d3.svg.line().interpolate("basis")
+                .x(function(d, i) { return i*20; })
+                .y(function(d) { return -d[1] * 20; });
+    var w = 960;
+    var h = 350;
+
+    var canvas = d3.select('body')
+            .append('svg')
+            .attr('width', w)
+            .attr('height', h)
+            .style('margin-top', '360px');
+
+        canvas.append("path")
+          .datum(dataset)
+          .attr("class", "line")
+          .attr("d", line)
+          .attr("transform", "translate(300, 190)")
+          .style('fill', 'none')
+          .style('stroke', 'white')
+          .style('stroke-width', '1.5px');
+
+        canvas.selectAll('text.y-axis')
+            .data(yAxis)
+            .enter().append('text')
+                .attr('class', 'y-axis')
+                .text(function(d) {
+                    return d;
+                })
+                .attr("x", -20)
+                .attr("y", function(d) {
+                    return -d * 20;
+                })
+                .attr("transform", function(d, i) {
+                    return "translate(305, 190)";
+                })
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "11px")
+                .attr("fill", "white")
+                .attr("text-anchor", "end");
+
+        canvas.selectAll('text.x-axis')
+            .data(dataset)
+            .enter().append('text')
+                .attr('class', 'x-axis')
+                .text(function(d) {
+                    return d[0];
+                })
+                .attr("x", function(d, i) {
+                    d.cx = i * 20;
+                    return d.cx;
+                })
+                .attr("y", function(d) {
+                    d.cy = baseline + 20;
+                    return d.cy;
+                })
+                .attr("transform", function(d, i) {
+                    return "translate(300, 60) rotate(-70 "+d.cx+", "+d.cy+")";
+                })
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "11px")
+                .attr("fill", "white")
+                .attr("text-anchor", "end");
+}
+
 function drawMap (photos) {
     var projection = d3.geo.mercator()
                        .scale(200)
@@ -239,35 +330,39 @@ function drawMap (photos) {
         mapContainer.insert("path", ".graticule")
             .datum(topojson.object(world, world.objects.land))
             .attr("class", "land")
+            .attr('opacity', 0)
             .attr("d", path)
-            .attr('pointer-events', 'none');
+            .attr('pointer-events', 'none')
+            .transition()
+                .attr('opacity', 1);
 
         mapContainer.insert("path", ".graticule")
             .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
             .attr("class", "boundary")
+            .attr('opacity', 0)
             .attr("d", path)
-            .attr('pointer-events', 'none');
+            .attr('pointer-events', 'none')
+            .transition()
+                .attr('opacity', 1);
 
         mapContainer.selectAll("circle")
             .data(photos)
             .enter().append("circle")
                 .attr("r", 12)
+                .attr('opacity', 0)
                 .attr("fill", "white")
                 .attr("transform", function(d) {
                     d.proj = projection([d.location.longitude, d.location.latitude]);
                     return "translate(" + d.proj + ")";
-                    //return "translate(" + projection([-75,43]) + ")"; // New York City
                 })
                 .on('mouseover', function (d, i) {
-
-                    console.log(d);
-
                     d3.select(this)
                         .transition()
                             .attr("r", 16)
                             .attr("fill", "#e18558");
 
                     d3.select('.tooltip')
+                        .style('display', 'block')
                         .transition()
                             .style('left', d3.event.pageX - 65 + "px")
                             .style('top', d3.event.pageY - 160 + "px")
@@ -291,6 +386,21 @@ function drawMap (photos) {
                             .select('img')
                                 .attr('src', '')
                                 .attr('alt', '');
-                });
+
+                    d3.select('.tooltip')
+                        .style('display', 'none');
+                })
+                .on('click', function (d, i) {
+                    var clickSim = document.createEvent('MouseEvents');
+                    clickSim.initEvent('click', true, true);
+
+                    var link = document.createElement('a');
+                    link.href = d.link;
+                    link.target = "_blank";
+                    link.dispatchEvent(clickSim);
+                })
+                .transition()
+                    .delay(300)
+                    .attr('opacity', 1);
     });
 }
